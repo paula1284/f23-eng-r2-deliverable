@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/schema";
 import Image from "next/image";
+import SpeciesDetailsDialog from "./species-details-dialog";
 type Species = Database["public"]["Tables"]["species"]["Row"];
 
 export default function SpeciesCard(species: Species) {
@@ -14,8 +14,7 @@ export default function SpeciesCard(species: Species) {
       <h3 className="mt-3 text-2xl font-semibold">{species.common_name}</h3>
       <h4 className="text-lg font-light italic">{species.scientific_name}</h4>
       <p>{species.description ? species.description.slice(0, 150).trim() + "..." : ""}</p>
-      {/* Replace with detailed view */}
-      <Button className="mt-3 w-full">Learn More</Button>
+      <SpeciesDetailsDialog key={species.id} {...species} />
     </div>
   );
 }
