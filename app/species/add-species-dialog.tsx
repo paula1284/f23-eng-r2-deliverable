@@ -51,6 +51,15 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
     const response = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/html/${cleanedInput}?redirect=false&stash=false`,
     );
+
+    if (response.status === 404) {
+      return toast({
+        title: "Species not found.",
+        description: "Please try a different name.",
+        variant: "destructive",
+      });
+    }
+
     const data = await response.text();
     const $ = cheerio.load(data);
 
