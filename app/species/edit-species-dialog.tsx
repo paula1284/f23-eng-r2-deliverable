@@ -19,20 +19,26 @@ import { kingdoms, speciesSchema } from "@/lib/constants";
 import { type Database } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { useState, type BaseSyntheticEvent } from "react";
 import { useForm } from "react-hook-form";
 import { type z } from "zod";
+type Species = Database["public"]["Tables"]["species"]["Row"];
 
-type FormData = z.infer<typeof speciesSchema>;
-
-const defaultValues: Partial<FormData> = {
-  kingdom: "Animalia",
-};
-
-export default function AddSpeciesDialog({ userId }: { userId: string }) {
+export default function EditSpeciesDialog({ userId, species }: { userId: string; species: Species }) {
   const router = useRouter();
   const [open, setOpen] = useState<boolean>(false);
+
+  type FormData = z.infer<typeof speciesSchema>;
+
+  const defaultValues: Partial<FormData> = {
+    kingdom: species.kingdom,
+    common_name: species.common_name,
+    description: species.description,
+    image: species.image ?? undefined,
+    scientific_name: species.scientific_name,
+    total_population: species.total_population ?? undefined,
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(speciesSchema),
@@ -41,19 +47,25 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
   });
 
   const onSubmit = async (input: FormData) => {
+    // Ensure that user is correct before changing databse
+    if (userId != species.author) {
+      redirect("/species");
+    }
+
     // The `input` prop contains data that has already been processed by zod. We can now use it in a supabase query
     const supabase = createClientComponentClient<Database>();
-    const { error } = await supabase.from("species").insert([
-      {
-        author: userId,
+    const { error } = await supabase
+      .from("species")
+      .update({
+        author: species.author,
         common_name: input.common_name,
         description: input.description,
         kingdom: input.kingdom,
         scientific_name: input.scientific_name,
         total_population: input.total_population,
         image: input.image,
-      },
-    ]);
+      })
+      .eq("id", species.id);
 
     if (error) {
       return toast({
@@ -76,16 +88,16 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" onClick={() => setOpen(true)}>
-          <Icons.add className="mr-3 h-5 w-5" />
-          Add Species
+        <Button variant="outline" className="mt-2 h-8 w-full" onClick={() => setOpen(true)}>
+          <Icons.pencil className="mr-3 h-5 w-5" />
+          Edit Species
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-screen overflow-y-auto sm:max-w-[600px]">
+      <DialogContent className="max-h-screen overflow-y-auto border-4 border-primary sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Add Species</DialogTitle>
+          <DialogTitle>Edit Species</DialogTitle>
           <DialogDescription>
-            Add a new species here. Click &quot;Add Species&quot; below when you&apos;re done.
+            Edit your species here. Click &quot;Update Species&quot; below when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -98,7 +110,7 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
                   <FormItem>
                     <FormLabel>Scientific Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Cavia porcellus" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -205,8 +217,8 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
                 }}
               />
               <div className="flex">
-                <Button type="submit" className="ml-1 mr-1 flex-auto">
-                  Add Species
+                <Button type="submit" className="ml-1 mr-1 flex-auto bg-foreground hover:bg-secondary-foreground">
+                  Update Species
                 </Button>
                 <Button
                   type="button"
