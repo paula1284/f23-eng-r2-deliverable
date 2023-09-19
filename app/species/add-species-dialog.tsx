@@ -26,13 +26,15 @@ import { type z } from "zod";
 
 type FormData = z.infer<typeof speciesSchema>;
 
-const defaultValues: Partial<FormData> = {
-  kingdom: "Animalia",
-};
-
-export default function AddSpeciesDialog({ userId }: { userId: string }) {
+export default function AddSpeciesDialog({ userId, desc, img }: { userId: string; desc: string; img: string }) {
   const router = useRouter();
   const [open, setOpen] = useState<boolean>(false);
+
+  const defaultValues: Partial<FormData> = {
+    kingdom: "Animalia",
+    description: desc,
+    image: img,
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(speciesSchema),

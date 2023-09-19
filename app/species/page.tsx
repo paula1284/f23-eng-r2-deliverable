@@ -3,6 +3,7 @@ import { TypographyH2 } from "@/components/ui/typography";
 import { createServerSupabaseClient } from "@/lib/server-utils";
 import { redirect } from "next/navigation";
 import AddSpeciesDialog from "./add-species-dialog";
+import SearchBar from "./search-bar";
 import SpeciesCard from "./species-card";
 
 export default async function SpeciesList() {
@@ -23,7 +24,8 @@ export default async function SpeciesList() {
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <TypographyH2>Species List</TypographyH2>
-        <AddSpeciesDialog key={new Date().getTime()} userId={session.user.id} />
+        <SearchBar userId={session.user.id} />
+        <AddSpeciesDialog key={new Date().getTime()} userId={session.user.id} desc="" img="" />
       </div>
       <Separator className="my-4" />
       <div className="flex flex-wrap justify-center">
