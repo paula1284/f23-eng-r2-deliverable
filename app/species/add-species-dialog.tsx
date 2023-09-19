@@ -48,10 +48,12 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
   const onSubmitSearch = async (input: { search: string }) => {
     const cleanedInput = input.search.replace(/ /g, "_");
 
+    // Fetch HTML from Wikipedia
     const response = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/html/${cleanedInput}?redirect=false&stash=false`,
     );
 
+    // If not found, throw an error
     if (response.status === 404) {
       return toast({
         title: "Species not found.",
@@ -63,15 +65,19 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
     const data = await response.text();
     const $ = cheerio.load(data);
 
+    // Get the summary description
     const descriptionElement = $("table").nextAll("p").first();
     const descriptionElementText = descriptionElement.text();
 
+    // Get the first image
     const imgElement = $("img:first");
     const imgUrl = imgElement.attr("src");
 
+    // Get the scientific name
     const binomialElement = $("span.binomial");
     const binomialElementText = binomialElement.text();
 
+    // Autofill the form with the previously found values
     form1.reset({
       description: descriptionElementText ?? "",
       image: imgUrl ? "https:" + imgUrl : "",

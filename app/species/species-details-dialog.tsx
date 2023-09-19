@@ -10,6 +10,8 @@ type Species = Database["public"]["Tables"]["species"]["Row"];
 
 export default function SpeciesDetailsDialog(species: Species) {
   const [open, setOpen] = useState<boolean>(false);
+
+  // Colors for each kingdom (for setting background color of "kingdom" line)
   const kingdom_colors = {
     Animalia: "bg-red-900",
     Plantae: "bg-orange-900",
