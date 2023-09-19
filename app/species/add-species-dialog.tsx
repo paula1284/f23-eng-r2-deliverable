@@ -19,6 +19,7 @@ import { kingdoms, speciesSchema } from "@/lib/constants";
 import { type Database } from "@/lib/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import * as cheerio from "cheerio";
 import { useRouter } from "next/navigation";
 import { useState, type BaseSyntheticEvent } from "react";
 import { useForm } from "react-hook-form";
@@ -26,23 +27,51 @@ import { type z } from "zod";
 
 type FormData = z.infer<typeof speciesSchema>;
 
-export default function AddSpeciesDialog({ userId, desc, img }: { userId: string; desc: string; img: string }) {
+export default function AddSpeciesDialog({ userId }: { userId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState<boolean>(false);
 
   const defaultValues: Partial<FormData> = {
     kingdom: "Animalia",
-    description: desc,
-    image: img,
   };
 
-  const form = useForm<FormData>({
+  const form1 = useForm<FormData>({
     resolver: zodResolver(speciesSchema),
     defaultValues,
     mode: "onChange",
   });
 
-  const onSubmit = async (input: FormData) => {
+  const form2 = useForm<{ search: string }>({
+    mode: "onSubmit",
+  });
+
+  const onSubmitSearch = async (input: { search: string }) => {
+    const cleanedInput = input.search.replace(/ /g, "_");
+
+    const response = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/html/${cleanedInput}?redirect=false&stash=false`,
+    );
+    const data = await response.text();
+    const $ = cheerio.load(data);
+
+    const descriptionElement = $("table").nextAll("p").first();
+    const descriptionElementText = descriptionElement.text();
+
+    const imgElement = $("img:first");
+    const imgUrl = imgElement.attr("src");
+
+    const binomialElement = $("span.binomial");
+    const binomialElementText = binomialElement.text();
+
+    form1.reset({
+      description: descriptionElementText ?? "",
+      image: imgUrl ? "https:" + imgUrl : "",
+      scientific_name: binomialElementText ?? "",
+      common_name: input.search,
+    });
+  };
+
+  const onSubmitAdd = async (input: FormData) => {
     // The `input` prop contains data that has already been processed by zod. We can now use it in a supabase query
     const supabase = createClientComponentClient<Database>();
     const { error } = await supabase.from("species").insert([
@@ -66,7 +95,7 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
     }
     // Reset form values to the data values that have been processed by zod.
     // This way the user sees any changes that have occurred during transformation
-    form.reset(input);
+    form1.reset(input);
 
     setOpen(false);
 
@@ -86,15 +115,40 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
       <DialogContent className="max-h-screen overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Add Species</DialogTitle>
+          <Form {...form2}>
+            <form onSubmit={(e: BaseSyntheticEvent) => void form2.handleSubmit(onSubmitSearch)(e)}>
+              <div className="grid w-full items-center gap-4">
+                <FormField
+                  control={form2.control}
+                  name="search"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Search</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Autofill from common or scientific name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex">
+                  <Button variant="secondary" type="submit" onClick={() => setOpen(true)}>
+                    <Icons.add className="mr-3 h-5 w-5" />
+                    Autofill
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </Form>
           <DialogDescription>
             Add a new species here. Click &quot;Add Species&quot; below when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={(e: BaseSyntheticEvent) => void form.handleSubmit(onSubmit)(e)}>
+        <Form {...form1}>
+          <form onSubmit={(e: BaseSyntheticEvent) => void form1.handleSubmit(onSubmitAdd)(e)}>
             <div className="grid w-full items-center gap-4">
               <FormField
-                control={form.control}
+                control={form1.control}
                 name="scientific_name"
                 render={({ field }) => (
                   <FormItem>
@@ -107,7 +161,7 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
                 )}
               />
               <FormField
-                control={form.control}
+                control={form1.control}
                 name="common_name"
                 render={({ field }) => {
                   // We must extract value from field and convert a potential defaultValue of `null` to "" because inputs can't handle null values: https://github.com/orgs/react-hook-form/discussions/4091
@@ -124,7 +178,7 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
                 }}
               />
               <FormField
-                control={form.control}
+                control={form1.control}
                 name="kingdom"
                 render={({ field }) => (
                   <FormItem>
@@ -151,7 +205,7 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
                 )}
               />
               <FormField
-                control={form.control}
+                control={form1.control}
                 name="total_population"
                 render={({ field }) => (
                   <FormItem>
@@ -170,7 +224,7 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
                 )}
               />
               <FormField
-                control={form.control}
+                control={form1.control}
                 name="image"
                 render={({ field }) => (
                   <FormItem>
@@ -186,7 +240,7 @@ export default function AddSpeciesDialog({ userId, desc, img }: { userId: string
                 )}
               />
               <FormField
-                control={form.control}
+                control={form1.control}
                 name="description"
                 render={({ field }) => {
                   // We must extract value from field and convert a potential defaultValue of `null` to "" because textareas can't handle null values: https://github.com/orgs/react-hook-form/discussions/4091
