@@ -46,6 +46,7 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
   });
 
   const onSubmitSearch = async (input: { search: string }) => {
+    // Replace spaces with underscores
     const cleanedInput = input.search.replace(/ /g, "_");
 
     // Fetch HTML from Wikipedia
